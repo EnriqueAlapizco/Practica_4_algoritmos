@@ -125,6 +125,61 @@ public class JuegoEightOff {
         return true;
     }
 
+    /**
+     * Enumera los movimientos legales sin modificar el tablero ni el historial.
+     * Primero considera bases, luego columnas y finalmente reservas.
+     * La lista resultante es independiente del estado interno.
+     */
+    public ListaSimple<Movimiento> getMovimientosDisponibles() {
+        ListaSimple<Movimiento> movimientos = new ListaSimple<>();
+        agregarMovimientosHacia(ZonaJuego.BASE, CANTIDAD_BASES, movimientos);
+        agregarMovimientosHacia(ZonaJuego.COLUMNA, CANTIDAD_COLUMNAS, movimientos);
+        agregarMovimientosHacia(ZonaJuego.RESERVA, CANTIDAD_RESERVAS, movimientos);
+        return movimientos;
+    }
+
+    /** Devuelve una jugada legal, o null si no existe ninguna. No la ejecuta. */
+    public Movimiento getPista() {
+        ListaSimple<Movimiento> movimientos = getMovimientosDisponibles();
+        return movimientos.estaVacia() ? null : movimientos.obtener(0);
+    }
+
+    public boolean hayMovimientosDisponibles() {
+        return getPista() != null;
+    }
+
+    /** La partida se gana cuando cada base contiene sus trece cartas. */
+    public boolean haGanado() {
+        for (ListaSimple<Carta> base : bases) {
+            if (base.getTamanio() != 13) { return false; }
+        }
+        return true;
+    }
+
+    /** Se calcula de nuevo para reflejar tambien deshacer y nueva partida. */
+    public EstadoPartida getEstado() {
+        if (haGanado()) { return EstadoPartida.GANADA; }
+        return hayMovimientosDisponibles()
+                ? EstadoPartida.EN_CURSO : EstadoPartida.SIN_MOVIMIENTOS;
+    }
+
+    private void agregarMovimientosHacia(ZonaJuego destino, int cantidadDestinos,
+            ListaSimple<Movimiento> movimientos) {
+        // Las bases no son origen; las reservas se revisan antes que las columnas.
+        for (int tipoOrigen = 0; tipoOrigen < 2; tipoOrigen++) {
+            ZonaJuego origen = tipoOrigen == 0 ? ZonaJuego.RESERVA : ZonaJuego.COLUMNA;
+            int cantidadOrigenes = origen == ZonaJuego.RESERVA
+                    ? CANTIDAD_RESERVAS : CANTIDAD_COLUMNAS;
+            for (int i = 0; i < cantidadOrigenes; i++) {
+                for (int j = 0; j < cantidadDestinos; j++) {
+                    if (puedeMover(origen, i, destino, j)) {
+                        movimientos.insertarFinal(new Movimiento(origen, i, destino, j));
+                    }
+                }
+            }
+        }
+    }
+
     private ListaSimple<Carta> obtenerEspacio(ZonaJuego zona, int indice) {
         if (zona == null || indice < 0) { return null; }
         ListaSimple<ListaSimple<Carta>> espacios;
