@@ -54,6 +54,64 @@ public class JuegoEightOff {
         return copiar(bases.obtener(indice));
     }
 
+    /**
+     * Consulta un movimiento de una sola carta sin modificar la partida.
+     * Los indices empiezan en cero. Las bases solo reciben cartas;
+     * una carta cubierta no se puede seleccionar como origen.
+     * Devuelve false tambien para zonas nulas o indices invalidos.
+     */
+    public boolean puedeMover(ZonaJuego zonaOrigen, int indiceOrigen,
+            ZonaJuego zonaDestino, int indiceDestino) {
+        ListaSimple<Carta> origen = obtenerEspacio(zonaOrigen, indiceOrigen);
+        ListaSimple<Carta> destino = obtenerEspacio(zonaDestino, indiceDestino);
+        if (origen == null || destino == null || origen == destino
+                || origen.estaVacia() || zonaOrigen == ZonaJuego.BASE) {
+            return false;
+        }
+
+        Carta carta = origen.obtenerFinal();
+        switch (zonaDestino) {
+            case RESERVA:
+                return destino.estaVacia();
+            case COLUMNA:
+                if (destino.estaVacia()) {
+                    return carta.getRango() == 13;
+                }
+                Carta superior = destino.obtenerFinal();
+                return carta.getPalo() == superior.getPalo()
+                        && carta.getRango() + 1 == superior.getRango();
+            case BASE:
+                return carta.getPalo().ordinal() == indiceDestino
+                        && carta.getRango() == destino.getTamanio() + 1;
+            default:
+                return false;
+        }
+    }
+
+    /** Mueve la carta libre del origen; si no es legal, conserva el estado. */
+    public boolean mover(ZonaJuego zonaOrigen, int indiceOrigen,
+            ZonaJuego zonaDestino, int indiceDestino) {
+        if (!puedeMover(zonaOrigen, indiceOrigen, zonaDestino, indiceDestino)) {
+            return false;
+        }
+        ListaSimple<Carta> origen = obtenerEspacio(zonaOrigen, indiceOrigen);
+        ListaSimple<Carta> destino = obtenerEspacio(zonaDestino, indiceDestino);
+        destino.insertarFinal(origen.eliminarFinal());
+        return true;
+    }
+
+    private ListaSimple<Carta> obtenerEspacio(ZonaJuego zona, int indice) {
+        if (zona == null || indice < 0) { return null; }
+        ListaSimple<ListaSimple<Carta>> espacios;
+        switch (zona) {
+            case COLUMNA: espacios = columnas; break;
+            case RESERVA: espacios = reservas; break;
+            case BASE: espacios = bases; break;
+            default: return null;
+        }
+        return indice < espacios.getTamanio() ? espacios.obtener(indice) : null;
+    }
+
     private ListaSimple<ListaSimple<Carta>> crearEspacios(int cantidad) {
         ListaSimple<ListaSimple<Carta>> espacios = new ListaSimple<>();
         for (int i = 0; i < cantidad; i++) {
