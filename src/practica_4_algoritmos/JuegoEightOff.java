@@ -11,6 +11,7 @@ public class JuegoEightOff {
     private ListaSimple<ListaSimple<Carta>> columnas;
     private ListaSimple<ListaSimple<Carta>> reservas;
     private ListaSimple<ListaSimple<Carta>> bases;
+    private ListaSimple<Movimiento> historial;
 
     public JuegoEightOff() {
         nuevaPartida();
@@ -37,6 +38,7 @@ public class JuegoEightOff {
         columnas = nuevasColumnas;
         reservas = nuevasReservas;
         bases = nuevasBases;
+        historial = new ListaSimple<>();
     }
 
     /** Devuelve las cartas en orden; la ultima es la disponible para mover. */
@@ -97,6 +99,29 @@ public class JuegoEightOff {
         ListaSimple<Carta> origen = obtenerEspacio(zonaOrigen, indiceOrigen);
         ListaSimple<Carta> destino = obtenerEspacio(zonaDestino, indiceDestino);
         destino.insertarFinal(origen.eliminarFinal());
+        // El inicio funciona como la cima de una pila: ultimo en entrar, primero en salir.
+        historial.insertarInicio(new Movimiento(zonaOrigen, indiceOrigen,
+                zonaDestino, indiceDestino));
+        return true;
+    }
+
+    public boolean puedeDeshacer() {
+        return !historial.estaVacia();
+    }
+
+    /** Cantidad de movimientos actuales que aun se pueden deshacer. */
+    public int getCantidadMovimientos() {
+        return historial.getTamanio();
+    }
+
+    /** Restaura el ultimo movimiento sin registrar otro en el historial. */
+    public boolean deshacer() {
+        if (!puedeDeshacer()) { return false; }
+        Movimiento ultimo = historial.eliminarInicio();
+        ListaSimple<Carta> origen = obtenerEspacio(ultimo.getZonaOrigen(), ultimo.getIndiceOrigen());
+        ListaSimple<Carta> destino = obtenerEspacio(ultimo.getZonaDestino(), ultimo.getIndiceDestino());
+        // Restaurar el estado previo no requiere validar las reglas de un movimiento nuevo.
+        origen.insertarFinal(destino.eliminarFinal());
         return true;
     }
 
