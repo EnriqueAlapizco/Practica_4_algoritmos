@@ -15,3 +15,6 @@
 .hueco .label { -fx-text-fill: #deece0; -fx-font-size: 17px; }
 .desplazamiento, .desplazamiento > .viewport { -fx-background-color: #18752c; }
 .desplazamiento { -fx-padding: 0; -fx-background-insets: 0; }
+.carta.seleccionada { -fx-border-color: #1254c2; -fx-border-width: 3; }
+.mensaje { -fx-text-fill: #333333; -fx-font-size: 13px; }
+.mensaje.error { -fx-text-fill: #a40000; }
