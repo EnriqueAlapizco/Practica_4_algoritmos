@@ -7,6 +7,7 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -24,6 +25,7 @@ public class VistaTablero extends BorderPane {
     private ZonaJuego zonaSeleccionada;
     private int indiceSeleccionado = -1;
     private VistaCarta cartaSeleccionada;
+    private VistaCarta cartaPista;
     private final Label mensaje = new Label("Selecciona una carta libre y luego su destino.");
 
     public VistaTablero(JuegoEightOff juego) {
@@ -35,7 +37,7 @@ public class VistaTablero extends BorderPane {
         setOnKeyPressed(evento -> {
             if (evento.getCode() == KeyCode.ESCAPE) {
                 cancelarSeleccion();
-                informar("Seleccion cancelada.", false);
+                informarResultado("Seleccion cancelada.");
                 evento.consume();
             }
         });
@@ -55,7 +57,26 @@ public class VistaTablero extends BorderPane {
         HBox.setHgrow(espacio, Priority.ALWAYS);
         HBox cabecera = new HBox(12, titulo, espacio, movimientos);
         cabecera.setAlignment(Pos.CENTER_LEFT);
-        VBox encabezado = new VBox(6, cabecera, mensaje);
+        Button nueva = boton("Nueva partida", "nueva-partida", () -> {
+            juego.nuevaPartida();
+            actualizar();
+            informarResultado("Nueva partida. Selecciona una carta libre.");
+        });
+        Button reiniciar = boton("Reiniciar", "reiniciar", () -> {
+            juego.reiniciarPartida();
+            actualizar();
+            informarResultado("Reparto inicial restaurado.");
+        });
+        Button deshacer = boton("Deshacer", "deshacer", () -> {
+            juego.deshacer();
+            actualizar();
+            informarResultado("Ultimo movimiento deshecho.");
+        });
+        deshacer.setDisable(!juego.puedeDeshacer());
+        Button pista = boton("Pista", "pista", this::mostrarPista);
+        pista.setDisable(juego.getEstado() != EstadoPartida.EN_CURSO);
+        HBox controles = new HBox(8, nueva, reiniciar, deshacer, pista);
+        VBox encabezado = new VBox(8, cabecera, controles, mensaje);
         encabezado.getStyleClass().add("cabecera");
         setTop(encabezado);
 
@@ -85,7 +106,7 @@ public class VistaTablero extends BorderPane {
         setCenter(desplazamiento);
         desplazamiento.setVvalue(vertical);
         desplazamiento.setHvalue(horizontal);
-
+        informarResultado("Selecciona una carta libre y luego su destino.");
     }
 
     private VBox crearMonton(String nombre, ListaSimple<Carta> cartas,
@@ -136,13 +157,18 @@ public class VistaTablero extends BorderPane {
     }
 
     private void seleccionarOMover(ZonaJuego zona, int indice, VistaCarta vista, boolean libre) {
+        limpiarPista();
+        if (juego.getEstado() != EstadoPartida.EN_CURSO) {
+            informarResultado("");
+            return;
+        }
         if (zonaSeleccionada != null) {
             if (zona == zonaSeleccionada && indice == indiceSeleccionado) {
                 cancelarSeleccion();
                 informar("Seleccion cancelada.", false);
             } else if (juego.mover(zonaSeleccionada, indiceSeleccionado, zona, indice)) {
                 actualizar();
-                informar("Movimiento realizado. Selecciona otra carta.", false);
+                informarResultado("Movimiento realizado. Selecciona otra carta.");
             } else {
                 informar("Movimiento no permitido. Elige otro destino o pulsa Esc para cancelar.", true);
             }
@@ -164,12 +190,61 @@ public class VistaTablero extends BorderPane {
     }
 
     private void cancelarSeleccion() {
+        limpiarPista();
         if (cartaSeleccionada != null) {
             cartaSeleccionada.getStyleClass().remove("seleccionada");
         }
         cartaSeleccionada = null;
         zonaSeleccionada = null;
         indiceSeleccionado = -1;
+    }
+
+    private Button boton(String texto, String id, Runnable accion) {
+        Button boton = new Button(texto);
+        boton.setId(id);
+        boton.setOnAction(evento -> {
+            accion.run();
+            requestFocus();
+        });
+        return boton;
+    }
+
+    private void limpiarPista() {
+        if (cartaPista != null) {
+            cartaPista.getStyleClass().remove("carta-pista");
+            cartaPista = null;
+        }
+    }
+
+    /** Colorea solo la carta; el jugador debe seleccionarla y decidir el destino. */
+    private void mostrarPista() {
+        cancelarSeleccion();
+        Movimiento pista = juego.getPista();
+        if (pista == null) {
+            informarResultado("No hay una pista util en este momento; puede haber otras jugadas legales.");
+            return;
+        }
+        Pane origen = buscarPila(pista.getZonaOrigen(), pista.getIndiceOrigen());
+        cartaPista = (VistaCarta) origen.getChildren().get(origen.getChildren().size() - 1);
+        cartaPista.getStyleClass().add("carta-pista");
+        informar("La carta coloreada tiene un movimiento disponible.", false);
+    }
+
+    private Pane buscarPila(ZonaJuego zona, int indice) {
+        return (Pane) lookup("#" + zona.name().toLowerCase(java.util.Locale.ROOT) + "-" + indice);
+    }
+
+    private void informarResultado(String textoEnCurso) {
+        switch (juego.getEstado()) {
+            case GANADA:
+                informar("Partida ganada: completaste las cuatro bases. Puedes iniciar otra partida.", false);
+                break;
+            case SIN_MOVIMIENTOS:
+                informar("Partida terminada: no quedan movimientos. Puedes deshacer, reiniciar o comenzar otra.", true);
+                break;
+            default:
+                informar(textoEnCurso, false);
+        }
     }
 
     private void informar(String texto, boolean error) {

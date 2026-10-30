@@ -18,3 +18,4 @@
 .carta.seleccionada { -fx-border-color: #1254c2; -fx-border-width: 3; }
 .mensaje { -fx-text-fill: #333333; -fx-font-size: 13px; }
 .mensaje.error { -fx-text-fill: #a40000; }
+.carta.carta-pista { -fx-background-color: #fff19a; }

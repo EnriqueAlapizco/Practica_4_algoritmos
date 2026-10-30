@@ -105,6 +105,13 @@ public class JuegoEightOff {
         return true;
     }
 
+    /** Vuelve al mismo reparto inicial recorriendo el historial en orden inverso. */
+    public void reiniciarPartida() {
+        while (deshacer()) {
+            // Deshacer todos los movimientos conserva el orden original de las cartas.
+        }
+    }
+
     public boolean puedeDeshacer() {
         return !historial.estaVacia();
     }
@@ -138,14 +145,30 @@ public class JuegoEightOff {
         return movimientos;
     }
 
-    /** Devuelve una jugada legal, o null si no existe ninguna. No la ejecuta. */
+    /** Sugiere una jugada sin cambios de reserva ni retrocesos inmediatos. */
     public Movimiento getPista() {
-        ListaSimple<Movimiento> movimientos = getMovimientosDisponibles();
-        return movimientos.estaVacia() ? null : movimientos.obtener(0);
+        for (Movimiento movimiento : getMovimientosDisponibles()) {
+            if (movimiento.getZonaOrigen() == ZonaJuego.RESERVA
+                    && movimiento.getZonaDestino() == ZonaJuego.RESERVA) { continue; }
+            if (movimiento.getZonaOrigen() == ZonaJuego.COLUMNA
+                    && movimiento.getZonaDestino() == ZonaJuego.COLUMNA
+                    && columnas.obtener(movimiento.getIndiceOrigen()).getTamanio() == 1
+                    && columnas.obtener(movimiento.getIndiceDestino()).estaVacia()) { continue; }
+            if (!historial.estaVacia()) {
+                Movimiento anterior = historial.obtener(0);
+                if (movimiento.getZonaOrigen() == anterior.getZonaDestino()
+                        && movimiento.getIndiceOrigen() == anterior.getIndiceDestino()
+                        && movimiento.getZonaDestino() == anterior.getZonaOrigen()
+                        && movimiento.getIndiceDestino() == anterior.getIndiceOrigen()) { continue; }
+            }
+            return movimiento;
+        }
+        return null;
     }
 
     public boolean hayMovimientosDisponibles() {
-        return getPista() != null;
+        // No encontrar una pista util no significa que no queden jugadas legales.
+        return !getMovimientosDisponibles().estaVacia();
     }
 
     /** La partida se gana cuando cada base contiene sus trece cartas. */
